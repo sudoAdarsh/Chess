@@ -11,7 +11,7 @@ SELECTED = "#9fd3e6"
 LEGAL = "#b9ca4a"
 LAST = "#016845"
 CHECK_RED = "#d94b4b"
-FONT = ("DejaVu Sans", 60)
+FONT = ("DejaVu Sans", 60)    # <=== Decrease font is it doesnt fit your screeen
 en_passant_target = None 
 en_passant_pawn = None  
 
@@ -350,6 +350,8 @@ root = Tk()
 root.title("Chess")
 root.configure(bg="gray20")  #  <---- choose background color from "https://cs111.wellesley.edu/archive/cs111_fall14/public_html/labs/lab12/tkintercolor.html"
 
+
+# root.minsize()   #Set a minimum size if its too small for your screen
 frame = Frame(root)
 frame.pack(padx=20, pady=20)   
 
