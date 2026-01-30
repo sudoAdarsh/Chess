@@ -10,6 +10,8 @@ SELECTED = "#9fd3e6"
 LEGAL = "#b9ca4a"
 LAST = "#016845"
 FONT = ("DejaVu Sans", 60)
+en_passant_target = None 
+en_passant_pawn = None  
 
 # -------------------- GAME STATE --------------------
 current_turn = "white"
@@ -58,6 +60,9 @@ def is_in_check(color, board):
 def simulate_move(board, start, end):
     new_board = copy.deepcopy(board)
     piece = new_board.pop(start)
+    if isinstance(piece, Pawn) and end == en_passant_target and end not in new_board:
+        if en_passant_pawn in new_board:
+            new_board.pop(en_passant_pawn)
     new_board[end] = piece
     return new_board
 
@@ -73,6 +78,18 @@ def is_legal_move(piece, start, end, board):
     
     if isinstance(piece, King) and abs(end[1] - start[1]) == 2 and start[0] == end[0]:
         return can_castle(piece, start, end, board)
+
+    if isinstance(piece, Pawn) and end == en_passant_target and end not in board:
+        sr, sc = start
+        er, ec = end
+        direction = -1 if piece.color == "white" else 1
+
+        if er == sr + direction and abs(ec - sc) == 1:
+            victim = board.get(en_passant_pawn)
+            if victim and isinstance(victim, Pawn) and victim.color != piece.color:
+                test = simulate_move(board, start, end)
+                return not is_in_check(piece.color, test)
+        return False
     
     if not piece.is_valid_move(start, end, board):
         return False
@@ -166,7 +183,7 @@ def choose_promotion(color):
 
 # -------------------- CLICK HANDLER --------------------
 def on_click(event, r, c):
-    global selected_square, last_move, highlighted_moves, current_turn
+    global selected_square, last_move, highlighted_moves, current_turn, en_passant_pawn, en_passant_target
     
     if game_over:
         return
@@ -230,8 +247,20 @@ def on_click(event, r, c):
         board_state[rook_end] = rook
         rook.has_moved = True
 
+    if isinstance(piece, Pawn) and clicked == en_passant_target and clicked not in board_state:
+        if en_passant_pawn in board_state:
+            board_state.pop(en_passant_pawn)
+
     piece = board_state.pop(start)
     board_state[clicked] = piece
+
+    en_passant_target = None
+    en_passant_pawn = None
+
+    if isinstance(piece, Pawn) and abs(clicked[0] - start[0]) == 2:
+        mid_row = (clicked[0] + start[0]) // 2
+        en_passant_target = (mid_row, clicked[1])
+        en_passant_pawn = clicked
 
     # Pawn Promotion
     if isinstance(piece, Pawn):
