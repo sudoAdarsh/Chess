@@ -119,7 +119,7 @@ def choose_promotion(color):
         choice["piece"] = (piece_class, symbol)
         try:
             win.grab_release()
-        except TclError:
+        except TclError: 
             pass
         win.destroy()
 
