@@ -1,4 +1,5 @@
 from tkinter import *
+from tkinter import messagebox
 from rules import *
 import copy
 
@@ -9,6 +10,7 @@ DARK = "#528234"
 SELECTED = "#9fd3e6"
 LEGAL = "#b9ca4a"
 LAST = "#016845"
+CHECK_RED = "#d94b4b"
 FONT = ("DejaVu Sans", 60)
 en_passant_target = None 
 en_passant_pawn = None  
@@ -181,6 +183,32 @@ def choose_promotion(color):
     win.wait_window()
     return choice["piece"]
 
+
+
+# -------------------- GAME END --------------------
+
+def has_any_move(color):
+    for pos, piece in board_state.items():
+        if piece.color == color and get_legal_moves(piece, pos, board_state):
+            return True
+    return False
+
+def check_game_over():
+    global game_over
+    if not has_any_move(current_turn):
+        game_over = True
+        if is_in_check(current_turn, board_state):
+            print("CHECKMATE")
+            winner = "white" if current_turn == "black" else "black"
+            messagebox.showinfo("Checkmate", f"Checkmate! {winner.capitalize()} wins.")
+            
+        else:
+            print("STALEMATE")
+            messagebox.showinfo("Stalemate", "Stalemate! It's a draw.")
+        
+    
+
+
 # -------------------- CLICK HANDLER --------------------
 def on_click(event, r, c):
     global selected_square, last_move, highlighted_moves, current_turn, en_passant_pawn, en_passant_target
@@ -281,10 +309,15 @@ def on_click(event, r, c):
     current_turn = "black" if current_turn == "white" else "white"
     flip_board()
     update_board()
+    check_game_over()
 
 
 # -------------------- UI --------------------
 def update_board():
+    king_in_check_pos = None
+    if is_in_check(current_turn, board_state):
+        king_in_check_pos = find_king(current_turn, board_state)
+
     for (r, c), lbl in grid.items():
         base = LIGHT if (r + c) % 2 == 0 else DARK
         color = base
@@ -295,6 +328,9 @@ def update_board():
             color = LEGAL
         if selected_square == (r, c):
             color = SELECTED
+
+        if king_in_check_pos == (r, c):
+            color = CHECK_RED
         
         lbl.config(bg=color)
         piece = board_state.get((r, c))
