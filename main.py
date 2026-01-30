@@ -7,10 +7,12 @@ LIGHT = "#d6ebd5"
 DARK = "#528234"
 SELECTED = "#9fd3e6"
 LEGAL = "#b9ca4a"
-LAST = "#f5f682"
+LAST = "#016845"
 FONT = ("DejaVu Sans", 60)
 
 # -------------------- GAME STATE --------------------
+selected_square = None
+last_move = None
 selected_square = None
 game_over = False
 
@@ -34,7 +36,7 @@ board_state = new_board()
 
 # -------------------- CLICK HANDLER --------------------
 def on_click(event, r, c):
-    global selected_square
+    global selected_square, last_move
     
     if game_over:
         return
@@ -43,12 +45,16 @@ def on_click(event, r, c):
     if selected_square is None:
         if clicked in board_state:
             selected_square = clicked
-    else:
-        src_r, src_c = selected_square
-        piece = board_state.pop(selected_square)
-        board_state[(r, c)] = piece
-        update_board()
-        selected_square = None
+            update_board()
+            return
+
+    src_r, src_c = selected_square
+    piece = board_state.pop(selected_square)
+    board_state[(r, c)] = piece
+    last_move = (selected_square, clicked)
+    selected_square = None
+    update_board()
+    selected_square = None
 
 
 
@@ -59,7 +65,13 @@ def on_click(event, r, c):
 # -------------------- UI --------------------
 def update_board():
     for (r, c), lbl in grid.items():
-        color = LIGHT if (r + c) % 2 == 0 else DARK
+        base = LIGHT if (r + c) % 2 == 0 else DARK
+        color = base
+
+        if last_move and (r, c) in last_move:
+            color = LAST
+        if selected_square == (r, c):
+            color = SELECTED
         
         lbl.config(bg=color)
         piece = board_state.get((r, c))
