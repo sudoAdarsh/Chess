@@ -70,6 +70,10 @@ def is_legal_move(piece, start, end, board):
     target = board.get(end)
     if target and target.color == piece.color:
         return False
+    
+    if isinstance(piece, King) and abs(end[1] - start[1]) == 2 and start[0] == end[0]:
+        return can_castle(piece, start, end, board)
+    
     if not piece.is_valid_move(start, end, board):
         return False
     test = simulate_move(board, start, end)
@@ -85,6 +89,31 @@ def get_legal_moves(piece, pos, board):
                 moves.append((r, c))
     return moves
 
+
+def can_castle(king, start, end, board):
+    if king.has_moved or is_in_check(king.color, board):
+        return False
+    
+    sr, sc = start
+    er, ec = end
+
+    direction = 1 if ec > sc else -1
+    rook_col = 7 if direction == 1 else 0
+    rook_pos = (sr, rook_col)
+
+    rook = board.get(rook_pos)
+    if not rook or not isinstance(rook, Rook) or rook.has_moved:
+        return False
+    
+    for c in range(sc + direction, rook_col, direction):
+        if (sr, c) in board:
+            return False
+        
+    for c in [sc + direction, sc + 2 * direction]:
+        temp = simulate_move(board, start, (sr, c))
+        if is_in_check(king.color, temp):
+            return False
+    return True
 
 # -------------------- PAWN PROMOTION --------------------
 def choose_promotion(color):
@@ -186,6 +215,21 @@ def on_click(event, r, c):
         update_board
         return
     
+    if isinstance(piece, King) and abs(clicked[1] - start[1]) == 2:
+        row = start[0]
+        if clicked[1] > start[1]:
+            # King-side: rook h -> f
+            rook_start = (row, 7)
+            rook_end = (row, 5)
+        else:
+            # Queen-side: rook a -> d
+            rook_start = (row, 0)
+            rook_end = (row, 3)
+
+        rook = board_state.pop(rook_start)
+        board_state[rook_end] = rook
+        rook.has_moved = True
+
     piece = board_state.pop(start)
     board_state[clicked] = piece
 
