@@ -1,5 +1,6 @@
 from tkinter import *
 from rules import *
+import copy
 
 
 # -------------------- CONSTANTS --------------------
@@ -11,6 +12,7 @@ LAST = "#016845"
 FONT = ("DejaVu Sans", 60)
 
 # -------------------- GAME STATE --------------------
+current_turn = "white"
 selected_square = None
 highlighted_moves = []
 last_move = None
@@ -34,10 +36,108 @@ def new_board():
 
 board_state = new_board()
 
+# -------------------- CHECK LOGIC --------------------
+def find_king(color, board):
+    for pos, piece in board.items():
+        if isinstance(piece, King) and piece.color == color:
+            return pos
+    return None
+
+def is_in_check(color, board):
+    king_pos = find_king(color, board)
+    if king_pos is None:
+        return False
+    for pos, piece in board.items():
+        if piece.color != color:
+            if piece.is_valid_move(pos, king_pos, board):
+                return True
+    return False
+
+
+# -------------------- SIMULATION --------------------
+def simulate_move(board, start, end):
+    new_board = copy.deepcopy(board)
+    piece = new_board.pop(start)
+    new_board[end] = piece
+    return new_board
+
+
+
+# -------------------- MOVE VALIDATION --------------------
+def is_legal_move(piece, start, end, board):
+    if start == end:
+        return False
+    target = board.get(end)
+    if target and target.color == piece.color:
+        return False
+    if not piece.is_valid_move(start, end, board):
+        return False
+    test = simulate_move(board, start, end)
+    return not is_in_check(piece.color, test)
+
+
+def get_legal_moves(piece, pos, board):
+    moves = []
+    for r in range(8):
+        for c in range(8):
+            end = (r, c)
+            if is_legal_move(piece, pos, end, board):
+                moves.append((r, c))
+    return moves
+
+
+# -------------------- PAWN PROMOTION --------------------
+def choose_promotion(color):
+    choice = {"piece": None}
+
+    win = Toplevel(root)
+    win.title("Pawn Promotion")
+    win.configure(bg="gray20")
+    win.update_idletasks()
+    win.grab_set()
+    win.resizable(False, False)
+
+    Label(
+        win,
+        text="Choose Promotion",
+        font=("DejaVu Sans", 14),
+        bg="gray20",
+        fg="white"
+    ).pack(padx=10, pady=10)
+
+    pieces = [
+        ("Queen", Queen, "♕" if color == "white" else "♛"),
+        ("Rook", Rook,  "♖" if color == "white" else "♜"),
+        ("Bishop", Bishop, "♗" if color == "white" else "♝"),
+        ("Knight", Knight, "♘" if color == "white" else "♞"),
+    ]
+
+    frame = Frame(win, bg="gray20")
+    frame.pack(padx=10, pady=10)
+
+    def select(piece_class, symbol):
+        choice["piece"] = (piece_class, symbol)
+        try:
+            win.grab_release()
+        except TclError:
+            pass
+        win.destroy()
+
+    for name, cls, sym in pieces:
+        Button(
+            frame,
+            text=sym,
+            font=FONT,
+            width=2,
+            command=lambda c=cls, s=sym: select(c, s)
+        ).pack(side=LEFT, padx=5)
+
+    win.wait_window()
+    return choice["piece"]
 
 # -------------------- CLICK HANDLER --------------------
 def on_click(event, r, c):
-    global selected_square, last_move, highlighted_moves
+    global selected_square, last_move, highlighted_moves, current_turn
     
     if game_over:
         return
@@ -47,7 +147,7 @@ def on_click(event, r, c):
     # First click: select a piece
     if selected_square is None:
         piece = board_state.get(clicked)
-        if not piece:
+        if not piece or piece.color != current_turn:
             return
         selected_square = clicked
         highlighted_moves = get_legal_moves(piece, clicked, board_state)
@@ -56,20 +156,57 @@ def on_click(event, r, c):
 
 
     # Second click: try to move
-    if clicked not in highlighted_moves:
-        print("Invalid move")
+    if clicked == selected_square:   # Same color
+        selected_square = None
+        highlighted_moves = []
+        update_board()
+        return
+    
+    if selected_square is not None:  # Safety check
+        clicked_piece = board_state.get(clicked)
+        if clicked_piece and clicked_piece.color == current_turn:
+            selected_square = clicked
+            highlighted_moves = get_legal_moves(clicked_piece, clicked, board_state)
+            update_board()
+            return
+        
+    if clicked not in highlighted_moves:  # Illegal move
         selected_square = None
         highlighted_moves = []
         update_board()
         return
 
     start = selected_square
+    piece = board_state.get(start)
+
+    if not is_legal_move(piece, start, clicked, board_state):
+        print("Illegal move")
+        selected_square = None
+        highlighted_moves = []
+        update_board
+        return
+    
     piece = board_state.pop(start)
     board_state[clicked] = piece
+
+    # Pawn Promotion
+    if isinstance(piece, Pawn):
+        if (piece.color == "white" and clicked[0] == 0) or (piece.color == "black" and clicked[0] == 7):
+            promo = choose_promotion(piece.color)
+            if promo:
+                cls, sym = promo
+                board_state[clicked] = cls(piece.color, sym)
+            else:
+                board_state[clicked] = piece
+
+
     last_move = (start, clicked)
+    piece.has_moved = True
 
     selected_square = None
     highlighted_moves = []
+    current_turn = "black" if current_turn == "white" else "white"
+    flip_board()
     update_board()
 
 
@@ -90,6 +227,13 @@ def update_board():
         piece = board_state.get((r, c))
         lbl.config(text=piece.symbol if piece else "")
 
+
+def flip_board():
+    for (r, c), lbl in grid.items():
+        lbl.grid(
+            row=r if current_turn == "white" else 7 - r,
+            column=c if current_turn == "white" else 7 - c
+        )
 
 
 # -------------------- TKINTER --------------------

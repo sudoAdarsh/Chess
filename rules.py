@@ -1,11 +1,3 @@
-def get_legal_moves(piece, pos, board):
-    moves = []
-    for r in range(8):
-        for c in range(8):
-            if piece.is_valid_move(pos, (r, c), board):
-                moves.append((r, c))
-    return moves
-
 
 class Piece:
     def __init__(self, color, symbol):
@@ -41,6 +33,9 @@ class King(Piece):
 
 class Rook(Piece):
     def is_valid_move(self, start, end, board):
+        if start == end:
+            return False
+        
         sr, sc = start
         er, ec = end
 
@@ -61,6 +56,8 @@ class Rook(Piece):
 
 class Bishop(Piece):
     def is_valid_move(self, start, end, board):
+        if start == end:
+            return False
         sr, sc = start
         er, ec = end
 
