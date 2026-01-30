@@ -10,6 +10,9 @@ LEGAL = "#b9ca4a"
 LAST = "#f5f682"
 FONT = ("DejaVu Sans", 60)
 
+# -------------------- GAME STATE --------------------
+selected_square = None
+game_over = False
 
 # -------------------- BOARD SETUP --------------------
 def new_board():
@@ -27,6 +30,30 @@ def new_board():
     return board
 
 board_state = new_board()
+
+
+# -------------------- CLICK HANDLER --------------------
+def on_click(event, r, c):
+    global selected_square
+    
+    if game_over:
+        return
+    
+    clicked = (r, c)
+    if selected_square is None:
+        if clicked in board_state:
+            selected_square = clicked
+    else:
+        src_r, src_c = selected_square
+        piece = board_state.pop(selected_square)
+        board_state[(r, c)] = piece
+        update_board()
+        selected_square = None
+
+
+
+
+
 
 
 # -------------------- UI --------------------
@@ -54,6 +81,7 @@ for r in range(8):
     for c in range(8):
         lbl = Label(frame, width=2, height=1, font=FONT, relief="solid", bd=1)
         lbl.grid(row=r, column=c)
+        lbl.bind("<Button-1>", lambda e, r=r, c=c: on_click(e, r, c))
         grid[(r, c)] = lbl
 
 update_board()
