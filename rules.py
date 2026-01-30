@@ -1,3 +1,12 @@
+def get_legal_moves(piece, pos, board):
+    moves = []
+    for r in range(8):
+        for c in range(8):
+            if piece.is_valid_move(pos, (r, c), board):
+                moves.append((r, c))
+    return moves
+
+
 class Piece:
     def __init__(self, color, symbol):
         self.color = color

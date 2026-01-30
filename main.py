@@ -12,6 +12,7 @@ FONT = ("DejaVu Sans", 60)
 
 # -------------------- GAME STATE --------------------
 selected_square = None
+highlighted_moves = []
 last_move = None
 selected_square = None
 game_over = False
@@ -36,30 +37,40 @@ board_state = new_board()
 
 # -------------------- CLICK HANDLER --------------------
 def on_click(event, r, c):
-    global selected_square, last_move
+    global selected_square, last_move, highlighted_moves
     
     if game_over:
         return
     
     clicked = (r, c)
+
+    # First click: select a piece
     if selected_square is None:
-        if clicked in board_state:
-            selected_square = clicked
-            update_board()
+        piece = board_state.get(clicked)
+        if not piece:
             return
+        selected_square = clicked
+        highlighted_moves = get_legal_moves(piece, clicked, board_state)
+        update_board()
+        return
 
-    src_r, src_c = selected_square
-    piece = board_state.pop(selected_square)
-    board_state[(r, c)] = piece
-    last_move = (selected_square, clicked)
+
+    # Second click: try to move
+    if clicked not in highlighted_moves:
+        print("Invalid move")
+        selected_square = None
+        highlighted_moves = []
+        update_board()
+        return
+
+    start = selected_square
+    piece = board_state.pop(start)
+    board_state[clicked] = piece
+    last_move = (start, clicked)
+
     selected_square = None
+    highlighted_moves = []
     update_board()
-    selected_square = None
-
-
-
-
-
 
 
 # -------------------- UI --------------------
@@ -70,6 +81,8 @@ def update_board():
 
         if last_move and (r, c) in last_move:
             color = LAST
+        if (r, c) in highlighted_moves:
+            color = LEGAL
         if selected_square == (r, c):
             color = SELECTED
         
